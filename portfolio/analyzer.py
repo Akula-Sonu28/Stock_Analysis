@@ -20,7 +20,24 @@ import logging
 # Import existing project modules
 import sys
 sys.path.append('..')
-# from config import AnalysisConfig  # Not available in current config
+
+# Try to import config, use defaults if not available
+try:
+    from config import AnalysisConfig
+    CONFIG_AVAILABLE = True
+except ImportError:
+    CONFIG_AVAILABLE = False
+    # Create a simple config placeholder
+    class AnalysisConfig:
+        pass
+
+# Import Kite MCP connector
+try:
+    from src.kite_mcp_connector import KiteMCPConnector
+    KITE_MCP_AVAILABLE = True
+except ImportError:
+    KITE_MCP_AVAILABLE = False
+    print("⚠️ Kite MCP connector not available. Using CSV mode only.")
 
 class PortfolioAnalyzer:
     """Main Portfolio Analysis Engine"""
@@ -41,6 +58,12 @@ class PortfolioAnalyzer:
         self.sector_data = None
         self.portfolio_metrics = {}
         
+        # Initialize Kite MCP connector if available
+        self.kite_connector = None
+        if KITE_MCP_AVAILABLE:
+            self.kite_connector = KiteMCPConnector()
+            self.logger.info("Kite MCP connector initialized")
+        
     def _setup_logging(self) -> logging.Logger:
         """Setup logging for portfolio analysis"""
         logger = logging.getLogger('PortfolioAnalyzer')
@@ -56,23 +79,161 @@ class PortfolioAnalyzer:
             
         return logger
     
-    def load_portfolio_data(self, holdings_pattern: str = None, report_pattern: str = None) -> bool:
+    def load_portfolio_data(self, holdings_pattern: str = None, report_pattern: str = None, 
+                           data_source: str = None, use_kite_mcp: bool = None) -> bool:
         """
         Load portfolio holdings and enhanced stock report data
         
         Args:
             holdings_pattern: Pattern to find holdings CSV file
             report_pattern: Pattern to find Enhanced Stock Report Excel file
+            data_source: Data source override ("csv", "kite_mcp", "auto"). If None, uses config
+            use_kite_mcp: Deprecated. Use data_source instead.
             
         Returns:
             bool: True if data loaded successfully
         """
         try:
+            # Handle backward compatibility
+            if use_kite_mcp is not None:
+                data_source = "kite_mcp" if use_kite_mcp else "csv"
+            
+            # Determine data source from config if not specified
+            import portfolio_config
+            if data_source is None:
+                data_source = getattr(portfolio_config, 'DATA_SOURCE', 'csv')
+            
+            self.logger.info(f"Loading portfolio data using source: {data_source}")
+            
+            # Load holdings based on data source
+            if data_source == 'kite_mcp':
+                if not self._load_from_kite_mcp():
+                    # Fallback to CSV if enabled
+                    if getattr(portfolio_config, 'AUTO_FALLBACK_TO_CSV', True):
+                        self.logger.warning("Kite MCP failed, falling back to CSV")
+                        print("⚠️ Kite MCP unavailable, falling back to CSV")
+                        if not self._load_from_csv(holdings_pattern):
+                            return False
+                    else:
+                        return False
+            elif data_source == 'auto':
+                # Try Kite first, then CSV
+                if not self._load_from_kite_mcp():
+                    self.logger.info("Kite MCP not available, using CSV")
+                    if not self._load_from_csv(holdings_pattern):
+                        return False
+            else:  # csv
+                if not self._load_from_csv(holdings_pattern):
+                    return False
+            
+            # Load Enhanced Stock Report (same for all sources)
+            if not self._load_enhanced_report(report_pattern):
+                return False
+            
+            self.logger.info(f"Successfully loaded {len(self.holdings_df)} holdings")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error loading portfolio data: {str(e)}")
+            return False
+    
+    def _load_from_kite_mcp(self) -> bool:
+        """
+        Load holdings from Kite MCP
+        
+        Returns:
+            bool: True if loaded successfully
+        """
+        try:
+            if not KITE_MCP_AVAILABLE or self.kite_connector is None:
+                self.logger.warning("Kite MCP connector not available")
+                return False
+            
+            import portfolio_config
+            if not getattr(portfolio_config, 'KITE_MCP_ENABLED', False):
+                self.logger.info("Kite MCP not enabled in config")
+                return False
+            
+            self.logger.info("Fetching live holdings from Kite MCP...")
+            print("📡 Fetching live holdings from Kite...")
+            
+            # Note: This requires MCP tool access in the calling context
+            # For now, we'll use a helper method that can be called with MCP data
+            raise NotImplementedError(
+                "Direct MCP call not available here. Use load_from_kite_mcp_data() with MCP results."
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error loading from Kite MCP: {e}")
+            return False
+    
+    def load_from_kite_mcp_data(self, kite_holdings_data: list) -> bool:
+        """
+        Load holdings from Kite MCP data that was already fetched
+        
+        Args:
+            kite_holdings_data: List of holdings from mcp_kite_get_holdings
+            
+        Returns:
+            bool: True if loaded successfully
+        """
+        try:
+            if not KITE_MCP_AVAILABLE or self.kite_connector is None:
+                self.logger.error("Kite MCP connector not available")
+                return False
+            
+            self.logger.info(f"Transforming {len(kite_holdings_data)} Kite holdings...")
+            
+            # Transform Kite format to internal format
+            self.holdings_df = self.kite_connector.transform_kite_holdings(kite_holdings_data)
+            
+            if self.holdings_df.empty:
+                self.logger.warning("No holdings returned from Kite")
+                return False
+            
+            # Clean the data
+            self.holdings_df = self._clean_holdings_data(self.holdings_df)
+            
+            print(f"✅ Loaded {len(self.holdings_df)} holdings from Kite MCP")
+            
+            # Display summary
+            summary = self.kite_connector.get_holdings_summary(self.holdings_df)
+            print(f"\n📊 Portfolio Summary:")
+            print(f"   Total Invested: ₹{summary['total_invested']:,.2f}")
+            print(f"   Current Value: ₹{summary['total_current_value']:,.2f}")
+            print(f"   Total P&L: ₹{summary['total_pnl']:,.2f} ({summary['total_return_pct']:.2f}%)")
+            print(f"   Profitable: {summary['profitable_stocks']}/{summary['total_stocks']} stocks\n")
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error loading from Kite MCP data: {e}")
+            return False
+    
+    def _load_from_csv(self, holdings_pattern: str = None) -> bool:
+        """
+        Load holdings from CSV file
+        
+        Args:
+            holdings_pattern: Pattern to find holdings CSV file
+            
+        Returns:
+            bool: True if loaded successfully
+        """
+    def _load_from_csv(self, holdings_pattern: str = None) -> bool:
+        """
+        Load holdings from CSV file
+        
+        Args:
+            holdings_pattern: Pattern to find holdings CSV file
+            
+        Returns:
+            bool: True if loaded successfully
+        """
+        try:
             # Auto-detect latest files if patterns not provided
             if holdings_pattern is None:
                 holdings_pattern = "Holding/holdings*.csv"
-            if report_pattern is None:
-                report_pattern = "reports/Enhanced_Stock_Report_*.xlsx"
                 
             # Find latest holdings file
             holdings_files = glob.glob(holdings_pattern)
@@ -83,6 +244,7 @@ class PortfolioAnalyzer:
             latest_holdings = max(holdings_files, key=os.path.getctime)
             self.holdings_file = latest_holdings  # Store file path for executor
             self.logger.info(f"Loading holdings from: {latest_holdings}")
+            print(f"📁 Loading holdings from CSV: {os.path.basename(latest_holdings)}")
             
             # Load holdings data
             self.holdings_df = pd.read_csv(latest_holdings)
@@ -91,11 +253,43 @@ class PortfolioAnalyzer:
             # Check for and merge orders files
             self._merge_orders_with_holdings(latest_holdings)
             
+            print(f"✅ Loaded {len(self.holdings_df)} holdings from CSV")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error loading from CSV: {str(e)}")
+            return False
+    
+    def _load_enhanced_report(self, report_pattern: str = None) -> bool:
+        """
+        Load Enhanced Stock Report
+        
+        Args:
+            report_pattern: Pattern to find Enhanced Stock Report Excel file
+            
+        Returns:
+            bool: True if loaded successfully
+        """
+    def _load_enhanced_report(self, report_pattern: str = None) -> bool:
+        """
+        Load Enhanced Stock Report
+        
+        Args:
+            report_pattern: Pattern to find Enhanced Stock Report Excel file
+            
+        Returns:
+            bool: True if loaded successfully
+        """
+        try:
+            if report_pattern is None:
+                report_pattern = "reports/Enhanced_Stock_Report_*.xlsx"
+            
             # Find latest Enhanced Stock Report
             report_files = glob.glob(report_pattern)
             if not report_files:
-                self.logger.error(f"No Enhanced Stock Report files found with pattern: {report_pattern}")
-                return False
+                self.logger.warning(f"No Enhanced Stock Report files found with pattern: {report_pattern}")
+                self.enhanced_report_df = {}
+                return True  # Not critical, continue without it
                 
             latest_report = max(report_files, key=os.path.getctime)
             self.logger.info(f"Loading Enhanced Stock Report from: {latest_report}")
@@ -106,12 +300,12 @@ class PortfolioAnalyzer:
             
             for sheet_name in excel_file.sheet_names:
                 self.enhanced_report_df[sheet_name] = pd.read_excel(latest_report, sheet_name=sheet_name)
-                
-            self.logger.info(f"Loaded {len(self.holdings_df)} holdings and {len(excel_file.sheet_names)} report sheets")
+            
+            self.logger.info(f"Loaded {len(excel_file.sheet_names)} report sheets")
             return True
             
         except Exception as e:
-            self.logger.error(f"Error loading portfolio data: {str(e)}")
+            self.logger.error(f"Error loading enhanced report: {str(e)}")
             return False
 
     def _merge_orders_with_holdings(self, holdings_file_path):

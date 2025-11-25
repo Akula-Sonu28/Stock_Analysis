@@ -9,7 +9,7 @@ Configure your portfolio analysis parameters here:
 """
 
 # Investment Parameters
-DEFAULT_AVAILABLE_FUNDS = 114129.60  # Your available funds
+DEFAULT_AVAILABLE_FUNDS = 120700.0  # Your available funds
 
 # Risk Management Thresholds
 LOSS_THRESHOLD = -10.0  # Exit stocks with loss > 10%
@@ -40,6 +40,12 @@ HEALTH_SCORE_WEIGHTS = {
 # File Patterns (for automatic detection)
 HOLDINGS_PATTERN = "Holding/holdings*.csv"
 ENHANCED_REPORT_PATTERN = "reports/Enhanced_Stock_Report_*.xlsx"
+
+# Data Source Configuration
+DATA_SOURCE = "kite_mcp"  # Options: "csv", "kite_mcp", "auto"
+KITE_MCP_ENABLED = True  # Set to True to fetch live holdings from Kite
+KITE_CACHE_TTL_MINUTES = 1  # How long to cache Kite data (in minutes)
+AUTO_FALLBACK_TO_CSV = True  # Fallback to CSV if Kite MCP fails
 
 # Reporting Settings
 REPORTS_DIRECTORY = "reports/portfolio"

@@ -52,6 +52,11 @@ class AnalysisConfig:
     BSE_SUFFIX: str = ".BO"
     DEFAULT_EXCHANGE: str = "NSE"
     
+    # Kite MCP Configuration
+    KITE_MCP_ENABLED: bool = False  # Enable Kite MCP for live data
+    DATA_SOURCE: str = "csv"  # Options: "csv", "kite_mcp", "auto"
+    KITE_CACHE_TTL_MINUTES: int = 5  # Cache time-to-live for Kite data
+    
     # Portfolio Settings
     DEFAULT_PORTFOLIO_AMOUNT: float = 100000
     MAX_PORTFOLIO_POSITIONS: int = 15

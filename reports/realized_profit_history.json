@@ -1,0 +1,110 @@
+{
+  "past_trades": [
+    {
+      "Symbol": "CANBK",
+      "Qty Sold": 62,
+      "Buy Price": "Rs.126.76",
+      "Est. Sell": "Rs.158.45",
+      "Est. Profit": "Rs.1,964.78"
+    },
+    {
+      "Symbol": "INDIANB",
+      "Qty Sold": 6,
+      "Buy Price": "Rs.758.05",
+      "Est. Sell": "Rs.947.56",
+      "Est. Profit": "Rs.1,137.08"
+    },
+    {
+      "Symbol": "BANKINDIA",
+      "Qty Sold": 34,
+      "Buy Price": "Rs.126.04",
+      "Est. Sell": "Rs.157.55",
+      "Est. Profit": "Rs.1,071.34"
+    },
+    {
+      "Symbol": "BANKBARODA",
+      "Qty Sold": 20,
+      "Buy Price": "Rs.266.60",
+      "Est. Sell": "Rs.333.25",
+      "Est. Profit": "Rs.1,333.00"
+    },
+    {
+      "Symbol": "AXISBANK",
+      "Qty Sold": 4,
+      "Buy Price": "Rs.1212.80",
+      "Est. Sell": "Rs.1516.00",
+      "Est. Profit": "Rs.1,212.80"
+    },
+    {
+      "Symbol": "KOTAKBANK",
+      "Qty Sold": 4,
+      "Buy Price": "Rs.2146.00",
+      "Est. Sell": "Rs.2682.50",
+      "Est. Profit": "Rs.2,146.00"
+    },
+    {
+      "Symbol": "UJJIVANSFB",
+      "Qty Sold": 204,
+      "Buy Price": "Rs.48.89",
+      "Est. Sell": "Rs.61.11",
+      "Est. Profit": "Rs.2,493.39"
+    },
+    {
+      "Symbol": "HDFCBANK",
+      "Qty Sold": 10,
+      "Buy Price": "Rs.973.45",
+      "Est. Sell": "Rs.1216.81",
+      "Est. Profit": "Rs.2,433.62"
+    },
+    {
+      "Symbol": "ETERNAL",
+      "Qty Sold": 14,
+      "Buy Price": "Rs.335.10",
+      "Est. Sell": "Rs.418.88",
+      "Est. Profit": "Rs.1,172.85"
+    }
+  ],
+  "today_trades": [
+    {
+      "Symbol": "INDUSINDBK",
+      "Qty": 32,
+      "Buy Price": "Rs.826.20",
+      "Sell Price": "Rs.833.35",
+      "Profit": "Rs.228.80"
+    },
+    {
+      "Symbol": "CANBK",
+      "Qty": 111,
+      "Buy Price": "Rs.118.62",
+      "Sell Price": "Rs.147.04",
+      "Profit": "Rs.3,154.62"
+    },
+    {
+      "Symbol": "AUROPHARMA",
+      "Qty": 34,
+      "Buy Price": "Rs.1142.50",
+      "Sell Price": "Rs.1209.00",
+      "Profit": "Rs.2,261.00"
+    },
+    {
+      "Symbol": "AUBANK",
+      "Qty": 8,
+      "Buy Price": "Rs.729.50",
+      "Sell Price": "Rs.935.90",
+      "Profit": "Rs.1,651.20"
+    },
+    {
+      "Symbol": "BANKBARODA",
+      "Qty": 26,
+      "Buy Price": "Rs.232.40",
+      "Sell Price": "Rs.284.40",
+      "Profit": "Rs.1,352.00"
+    }
+  ],
+  "summary": {
+    "past_realized_estimated": 14964.860000000002,
+    "today_realized": 8647.619999999997,
+    "total_realized": 23612.48,
+    "generated_on": "2025-11-25 12:30:45"
+  }
+}

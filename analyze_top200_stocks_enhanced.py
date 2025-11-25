@@ -4292,9 +4292,52 @@ class EnhancedTop200StockAnalyzer:
             return 1.0
     
     def _load_current_holdings(self):
-        """Load current portfolio holdings from portfolio.csv or holdings file"""
+        """Load current portfolio holdings from Kite MCP or CSV based on user choice"""
         try:
             import glob
+            import os
+            
+            # Check data source preference
+            data_source = os.environ.get('PORTFOLIO_DATA_SOURCE', 'auto')
+            
+            # Try Kite MCP if selected
+            if data_source in ['kite', 'auto']:
+                try:
+                    print(f"   🔄 Attempting to fetch holdings from Kite MCP...")
+                    
+                    # Import Kite MCP connector
+                    from src.kite_mcp_connector import KiteMCPConnector
+                    
+                    # Check if Kite is enabled in config
+                    import portfolio_config
+                    if getattr(portfolio_config, 'KITE_MCP_ENABLED', False):
+                        # We need to use MCP tools to fetch holdings
+                        # Since we can't directly call MCP tools from here, we'll display instructions
+                        print(f"   ⚠️  Kite MCP mode requires MCP tool access.")
+                        print(f"   💡 To use Kite holdings, please use the portfolio analyzer with MCP context.")
+                        
+                        # For auto mode, fall through to CSV
+                        if data_source == 'auto':
+                            print(f"   📂 Falling back to CSV mode...")
+                        else:
+                            print(f"   ❌ Cannot proceed without MCP tool access in kite mode.")
+                            return None
+                    else:
+                        if data_source == 'kite':
+                            print(f"   ⚠️  Kite MCP is not enabled in portfolio_config.py")
+                            print(f"   💡 Run setup_kite_mcp.py to configure Kite integration")
+                            return None
+                        # Auto mode - fall through to CSV
+                        
+                except ImportError:
+                    if data_source == 'kite':
+                        print(f"   ❌ Kite MCP connector not found. Please ensure src/kite_mcp_connector.py exists")
+                        return None
+                    # Auto mode - fall through to CSV
+                    print(f"   📂 Kite MCP not available, using CSV...")
+            
+            # Load from CSV files
+            print(f"   📂 Loading holdings from CSV files...")
             
             # Check if we have both holdings and orders files - then use merged
             holdings_files = glob.glob('Holding/holdings*.csv')
@@ -9022,7 +9065,66 @@ def main():
     parser.add_argument('--min-volatility', type=float, default=0.0, 
                         help='Minimum volatility threshold for high-risk investors (default: 0.0)')
     
+    # Data source option
+    parser.add_argument('--data-source', type=str, choices=['csv', 'kite', 'auto'],
+                        help='Data source for portfolio holdings: csv (manual), kite (Kite MCP), auto (detect automatically)')
+    
     args = parser.parse_args()
+    
+    # ========================================================================
+    # INTERACTIVE DATA SOURCE SELECTION
+    # ========================================================================
+    data_source_choice = args.data_source
+    
+    # If not specified via command line, ask interactively
+    if data_source_choice is None:
+        print("\n" + "=" * 90)
+        print("📊 PORTFOLIO DATA SOURCE SELECTION")
+        print("=" * 90)
+        print("\nChoose how you want to load your portfolio holdings:\n")
+        print("  [1] CSV File      - Manual portfolio from CSV/Excel file (RECOMMENDED)")
+        print("  [2] Auto-detect   - Automatically find available CSV files")
+        print("\n  💡 Note: For Kite MCP live holdings, please run this command:")
+        print("     python fetch_kite_holdings.py")
+        print("     This will save holdings to CSV which this script can then use.")
+        print("\n" + "-" * 90)
+        
+        while True:
+            choice = input("\nEnter your choice (1/2) [default: 2]: ").strip() or "2"
+            
+            if choice == "1":
+                data_source_choice = "csv"
+                print("\n✅ Selected: CSV File")
+                break
+            elif choice == "2":
+                data_source_choice = "auto"
+                print("\n✅ Selected: Auto-detect")
+                break
+            else:
+                print("❌ Invalid choice. Please enter 1 or 2.")
+        
+        print("=" * 90 + "\n")
+    
+    # Handle Kite MCP choice by explaining the limitation
+    if data_source_choice == "kite":
+        print("\n" + "=" * 90)
+        print("⚠️  KITE MCP DIRECT MODE NOT SUPPORTED IN STANDALONE SCRIPT")
+        print("=" * 90)
+        print("\nTo use live Kite holdings, please follow these steps:\n")
+        print("  1. Run: python fetch_kite_holdings.py")
+        print("  2. This will fetch your live holdings and save to CSV")
+        print("  3. Then run this analysis script again\n")
+        print("Alternatively, run setup_kite_mcp.py to configure automatic integration.")
+        print("=" * 90 + "\n")
+        
+        # Switch to auto mode which will find the CSV
+        data_source_choice = "auto"
+        print("Switching to auto-detect mode to find existing holdings...")
+    
+    # Store the data source choice for the analyzer to use later
+    # We'll pass this to the analyzer's portfolio loading methods
+    import os
+    os.environ['PORTFOLIO_DATA_SOURCE'] = data_source_choice
     
     # Auto-merge holdings and orders files if they exist
     merge_holdings_and_orders()
