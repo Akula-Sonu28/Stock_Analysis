@@ -6752,11 +6752,11 @@ Trading Plan ({risk_tolerance} RISK):
                     print(f"   💰 Calculating BOOK_PROFIT amounts in rupees...")
                     alloc_df_simple['profit_booking_amount'] = 0.0
                     
-                    # Convert to numeric to handle any string values
-                    alloc_df_simple['profit_booking_pct'] = pd.to_numeric(alloc_df_simple['profit_booking_pct'], errors='coerce')
-                    alloc_df_simple['current_value'] = pd.to_numeric(alloc_df_simple['current_value'], errors='coerce')
+                    # Convert to numeric to handle any string values, then fill NaN with 0
+                    alloc_df_simple['profit_booking_pct'] = pd.to_numeric(alloc_df_simple['profit_booking_pct'], errors='coerce').fillna(0)
+                    alloc_df_simple['current_value'] = pd.to_numeric(alloc_df_simple['current_value'], errors='coerce').fillna(0)
                     
-                    book_profit_mask = alloc_df_simple['profit_booking_pct'].notna() & (alloc_df_simple['profit_booking_pct'] > 0)
+                    book_profit_mask = (alloc_df_simple['profit_booking_pct'] > 0)
                     alloc_df_simple.loc[book_profit_mask, 'profit_booking_amount'] = (
                         alloc_df_simple.loc[book_profit_mask, 'current_value'] * 
                         alloc_df_simple.loc[book_profit_mask, 'profit_booking_pct']
